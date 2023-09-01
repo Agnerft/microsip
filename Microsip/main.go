@@ -14,7 +14,11 @@ import (
 )
 
 type config struct {
-	grupoRecurso, linkGvc, porta, ramal, senha string
+	grupoRecurso string `json:"grupoRecurso"`
+	linkGvc      string `json:"linkGvc"`
+	porta        string `json:"porta"`
+	ramal        string `json:"link"`
+	senha        string `json:"senha"`
 }
 
 func main() {
@@ -75,6 +79,10 @@ func main() {
 		return
 	}
 	fmt.Println("Processo encerrado com sucesso.")
+
+}
+
+func readJson() {
 
 }
 
