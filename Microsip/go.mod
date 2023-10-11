@@ -1,3 +1,5 @@
-module github.com.br/agnerft
+module Microsip
 
-go 1.21.0
+go 1.21.1
+
+require github.com/gorilla/mux v1.8.0

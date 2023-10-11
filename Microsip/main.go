@@ -1,216 +1,168 @@
 package main
 
 import (
-	"archive/zip"
+	"Microsip/database"
+	"Microsip/models"
+	"Microsip/router"
+	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"log"
-	"net/http"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
+	"strconv"
+	"time"
 )
 
-type config struct {
-	grupoRecurso string `json:"grupoRecurso"`
-	linkGvc      string `json:"linkGvc"`
-	porta        string `json:"porta"`
-	ramal        string `json:"link"`
-	senha        string `json:"senha"`
-}
+var clientConfig []models.ClienteConfig
+var docCliente models.Doc
 
 func main() {
 
-	c := config{"make", ".gvctelecom.com.br:", "5071", "901", "@abc"}
+	// Iniciar o servidor na porta 8080.
+	router.HeandleRequest()
+	var doc string
 
-	versao := "-3.21.3"
-	// URL do arquivo ZIP
-	zipURL := "https://www.microsip.org/download/MicroSIP-3.21.3.exe"
-	link := "https://raw.githubusercontent.com/Agnerft/microsip/main/TESTE/MicroSIP1/MicroSIP.txt"
-	nomeInstalador := "MicroSIP"
-
-	desktopPath, _ := os.UserHomeDir()
-
-	resultadoInstalador := salvarArquivo(zipURL, desktopPath, nomeInstalador, versao+".exe")
-
-	//Executar o instalador do MicroSIP
-
-	cmd := exec.Command(resultadoInstalador, "/S")
-	if err := cmd.Run(); err != nil {
-		fmt.Printf("Erro ao executar o instalador:%s ", err)
-		return
+	fmt.Print("Digite o documento da empresa: ")
+	_, err := fmt.Scanln(&doc)
+	if err != nil {
+		fmt.Println("Tente outra vez")
 	}
 
-	fmt.Println("Executou ?")
+	fmt.Println("Agora vamos verificar se vc está na nossa base de dados, um momento")
+	time.Sleep(1)
 
 	// Salvando o arquivo ini na pasta \\AppData\\Roamming
-	resultadoIni := salvarArquivo(link, desktopPath+"\\AppData\\Roaming\\", nomeInstalador, ".ini")
 
 	// Editando o arquivo
-	editor(resultadoIni, 2, "label="+c.ramal)
-	editor(resultadoIni, 3, "server="+c.grupoRecurso+c.linkGvc+c.porta)
-	editor(resultadoIni, 4, "proxy="+c.grupoRecurso+c.linkGvc+c.porta)
-	editor(resultadoIni, 5, "domain="+c.grupoRecurso+c.linkGvc+c.porta)
-	editor(resultadoIni, 6, "username="+c.ramal)
-	editor(resultadoIni, 7, "password="+c.ramal+c.senha)
-	editor(resultadoIni, 8, "authID="+c.ramal)
 
-	// Prints para teste
-	fmt.Println(desktopPath)
-	fmt.Println(resultadoInstalador)
-	fmt.Println(resultadoIni)
+	//jsonfile, _ := database.BuscaPorDoc(doc, clientConfig)
+	//fmt.Println(jsonfile)
 
-	// ALGUNS TESTES DEIXAR POR ENQUANTO
+	//if jsonfile == nil {
+	//	fmt.Println("Desculpe, não encontrei você . . . ")
+	//	return
+	//}
 
-	// Executa o comando de Taskill
-	processName := "MicroSIP.exe" // Substitua pelo nome do processo que você deseja encerrar
+	//fmt.Println("Encontrei você, ")
+	//fmt.Println("Os ramais que tenho vinculados a sua base são:")
+	//if err := json.Unmarshal(jsonfile, &clientConfig); err != nil {
+	//	fmt.Println("Erro ao fazer o Unmarshal do JSON:", err)
+	//	return
+	//}
 
-	cmd3 := exec.Command("taskkill", "/F", "/IM", processName)
+	//fmt.Println(&clientConfig)
 
-	// Redirecionar saída e erro, se necessário
-	cmd3.Stdout = os.Stdout
-	cmd3.Stderr = os.Stderr
+	// Edição e Salvamento do arquivo .ini
+	for _, config := range clientConfig {
 
-	err := cmd3.Run()
-	if err != nil {
-		fmt.Println("Erro ao executar o comando:", err)
-		return
-	}
-	fmt.Println("Processo encerrado com sucesso.")
+		for i := range config.QuantRamais {
+			fmt.Println(config.QuantRamais[i].Ramal)
+		}
 
-}
+		fmt.Println("Porém os que não foram configurados ainda são:")
 
-func readJson() {
+		for i := range config.QuantRamais {
+			if config.QuantRamais[i].InUse == false {
+				fmt.Println(config.QuantRamais[i].Ramal)
+			}
 
-}
+		}
 
-func downloadFile(url string, destPath string) error {
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	outFile, err := os.Create(destPath)
-	if err != nil {
-		return err
-	}
-	defer outFile.Close()
-
-	_, err = io.Copy(outFile, resp.Body)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func unzip(src string, dest string) error {
-	r, err := zip.OpenReader(src)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-
-	for _, f := range r.File {
-		rc, err := f.Open()
+		var ramal string
+		fmt.Print("Por favor informe agora, qual ramal você vai utilizar? ")
+		_, err := fmt.Scanln(&ramal)
 		if err != nil {
-			return err
+			fmt.Println("Erro ao ler a entrada:", err)
+			return
 		}
-		defer rc.Close()
+		//database.EditClient(config.ID, config)
 
-		filePath := filepath.Join(dest, f.Name)
-		if f.FileInfo().IsDir() {
-			os.MkdirAll(filePath, f.Mode())
-		} else {
-			outFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-			if err != nil {
-				return err
+		config.Ramal = ramal
+
+		ramalInt, _ := strconv.Atoi(ramal)
+
+		found := false
+
+		for i := range config.QuantRamais {
+
+			if config.QuantRamais[i].InUse != found {
+				fmt.Println("Ramal sendo usado.")
+				break
 			}
-			defer outFile.Close()
 
-			_, err = io.Copy(outFile, rc)
-			if err != nil {
-				return err
+			if config.QuantRamais[i].Ramal == ramalInt {
+				config.QuantRamais[i].InUse = true
+				found = true
+				break
 			}
 		}
+
+		if !found {
+			fmt.Println("Ramal não encontrado.")
+			return
+		}
+
+		fmt.Println(config)
+		fmt.Println("aqui?")
+
+		// Codifique a estrutura de dados atualizada para JSON
+		updatedJSON, err := json.Marshal(config.QuantRamais)
+		if err != nil {
+			fmt.Println("Erro ao serializar o JSON:", err)
+			return
+		}
+
+		fmt.Printf(string(updatedJSON))
+
+		database.EditClient(config.ID, config)
+		//
+		//
+		//
+		fmt.Println("Oi")
+		//linkCompleto := config.GrupoRecurso + config.LinkGvc + config.Porta
+		//utils.Editor(resultadoIni, 2, "label="+config.Ramal)
+		//utils.Editor(resultadoIni, 3, "server="+linkCompleto)
+		//utils.Editor(resultadoIni, 4, "proxy="+linkCompleto)
+		//utils.Editor(resultadoIni, 5, "domain="+linkCompleto)
+		//utils.Editor(resultadoIni, 6, "username="+config.Ramal)
+		//utils.Editor(resultadoIni, 7, "password="+config.Ramal+config.Senha)
+		//utils.Editor(resultadoIni, 8, "authID="+config.Ramal)
 	}
 
-	return nil
 }
 
-func salvarArquivo(link string, destination string, namePath string, extenssao string) string {
+//unc isValidDocument() {
 
-	// pegando o path C:\\%userprofile%
-	//desktopPath, _ := os.UserHomeDir()
+//docInt, _ := strconv.Atoi(doc)
+//var url string
+//for i := range url {
+//	s := strconv.Itoa(i)
+//	url := "https://basesip.makesystem.com.br/clientes/" + s
 
-	// criando a pasta passando o path e o nome da pasta
-	destinationFolder := filepath.Join(destination, namePath)
-	if err := os.MkdirAll(destinationFolder, os.ModePerm); err != nil {
-		fmt.Println("Erro ao criar a pasta na área de trabalho:", err)
+//	fmt.Println(url)
+//	response, err := http.Get(url)
+//		if err != nil {
+//fmt.Println("Erro ao fazer a solicitação HTTP:", err)
+//			return
+//		}
 
-	} // If da criação da pasta
+//		defer response.Body.Close()
 
-	// salvando o arquivo
-	arquivoTmp := filepath.Join(destinationFolder, namePath)
-	if err := downloadFile(link, arquivoTmp+extenssao); err != nil {
-		fmt.Println("Erro ao baixar o arquivo:", err)
+//}
 
-	}
-	fmt.Printf("Arquivo %s salvo com sucesso\n", namePath+extenssao)
-	return arquivoTmp + extenssao
+// Verifique o código de status da resposta HTTP
+///if response.StatusCode != http.StatusOK {
+//fmt.Println("Erro na resposta HTTP:", response.Status)
+//return
+//}
 
-}
+//decoder := json.NewDecoder(response.Body)
+//if err := decoder.Decode(&docCliente); err != nil {
+//	fmt.Println("Erro ao decodificar JSON:", err)
+//	return
+//}
 
-func editor(resultado string, numeroLinha int, novoValor string) {
+// Itere sobre os clientes e imprima apenas o campo "doc"
+//for _, cliente := range docCliente {
 
-	//resultado := "C:\\Users\\USER\\Microsip\\Microsip.txt"
+//	fmt.Println("Doc do cliente:", cliente.Doc)
+//}
 
-	file, err := os.OpenFile(resultado, os.O_RDWR, 0644)
-	if err != nil {
-		log.Fatalf("Erro ao abrir o arquivo: %v", err)
-	}
-	defer file.Close()
-
-	// Lê o conteúdo do arquivo
-	conteudo, err := ioutil.ReadAll(file)
-	if err != nil {
-		log.Fatalf("Erro ao ler o conteúdo do arquivo: %v", err)
-	}
-
-	//numeroLinha := 2
-	//novoValor := "label=7848"
-
-	// Converte o conteúdo para uma string
-	conteudoArquivo := string(conteudo)
-
-	linhas := strings.Split(conteudoArquivo, "\n")
-
-	if numeroLinha > 0 && numeroLinha < len(linhas) {
-		linhas[numeroLinha-1] = novoValor
-	}
-
-	novoConteudoArquivo := strings.Join(linhas, "\n")
-
-	_, err = file.Seek(0, 0)
-	if err != nil {
-		log.Fatal("Erro ao mover o ponteiro: %v", err)
-
-	}
-
-	_, err = file.WriteString(novoConteudoArquivo)
-	if err != nil {
-		log.Fatal("Erro ao salvar novo conteudo: %v", err)
-	}
-
-	err = file.Truncate(int64(len(novoConteudoArquivo)))
-	if err != nil {
-		log.Fatal("Erro ao truncar: %v", err)
-	}
-
-	//fmt.Println(novoConteudoArquivo)
-	fmt.Println("Alterações salvas com sucesso.")
-
-}
+// }
