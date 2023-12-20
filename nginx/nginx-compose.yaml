@@ -1,0 +1,272 @@
+# version: "3.7"
+
+# networks:
+#   combo-nginx:
+#     external: false
+
+# services:
+#   nginx1:
+#     image: nginxdemos/hello
+    
+#     networks:
+#       - combo-nginx
+#     ports:
+#     - "3152:80"
+
+#   nginx2:
+#     image: nginxdemos/hello
+#     container_name: nginx2
+#     networks:
+#       - combo-nginx
+#     ports:
+#     - "3153:80"
+
+#   nginx3:
+#     image: nginxdemos/hello
+    
+#     networks:
+#       - combo-nginx
+#     ports:
+#     - "3154:80"
+
+
+# Deploy nginx1
+
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: nginx1
+#   namespace: kong
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: nginx1
+#   template:
+#     metadata:
+#       labels:
+#         app: nginx1
+#     spec:
+#       containers:
+#         - name: nginx1
+#           image: nginxdemos/hello
+#           ports:
+#             - containerPort: 80
+
+# ---
+
+# # Ingress nginx1
+
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: nginx1
+#   namespace: kong
+#   annotations:
+#     konghq.com/strip-path: 'true'
+# spec:
+#   ingressClassName: kong
+#   rules:
+#   - host: teste-kong.makesystem.com.br
+#     http:
+#       paths:
+#       - path: /nginx1
+#         pathType: ImplementationSpecific
+#         backend:
+#           service:
+#             name: nginx1
+#             port:
+#               number: 80
+#   tls:
+#   - hosts:
+#     - teste-kong.makesystem.com.br
+#     secretName: tls-nginxs
+               
+# ---
+
+# # Service nginx1
+
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: nginx1
+#   namespace: kong
+# spec:
+#   selector:
+#     app: nginx1
+#   ports:
+#     - name: nginx1-port
+#       protocol: TCP
+#       port: 80
+#       targetPort: 80
+
+# ---
+
+# # Deploy nginx2
+
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: nginx2
+#   namespace: kong
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: nginx2
+#   template:
+#     metadata:
+#       labels:
+#         app: nginx2
+#     spec:
+#       containers:
+#         - name: nginx2
+#           image: nginxdemos/hello
+#           ports:
+#             - containerPort: 80
+
+# ---
+
+# # Ingress nginx 2
+
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: nginx2
+#   namespace: kong
+#   annotations:
+#     konghq.com/strip-path: 'true'
+# spec:
+#   ingressClassName: kong
+#   rules:
+#   - host: 
+#   - http:
+#       paths:
+#       - path: /nginx2
+#         pathType: ImplementationSpecific
+#         backend:
+#           service:
+#             name: nginx2
+#             port:
+#               number: 80
+  
+# ---
+# # Service nginx 2
+
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: nginx2
+#   namespace: kong
+# spec:
+#   selector:
+#     app: nginx2
+#   ports:
+#     - name: nginx2-port
+#       protocol: TCP
+#       port: 80
+#       targetPort: 80
+
+# ---
+# # Deploy nginx 3
+
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: nginx3
+#   namespace: kong
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: nginx3
+#   template:
+#     metadata:
+#       labels:
+#         app: nginx3
+#     spec:
+#       containers:
+#         - name: nginx3
+#           image: nginxdemos/hello
+#           ports:
+#             - containerPort: 80
+
+# ---
+# # Ingress nginx3
+
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: nginx3
+#   namespace: kong
+#   annotations:
+#     konghq.com/strip-path: 'true'
+# spec:
+#   ingressClassName: kong
+#   rules:
+#   - host: 
+#   - http:
+#       paths:
+#       - path: /nginx3
+#         pathType: ImplementationSpecific
+#         backend:
+#           service:
+#             name: nginx3
+#             port:
+#               number: 80
+  
+# ---
+
+# # Service nginx 3
+
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: nginx3
+#   namespace: kong
+# spec:
+#   selector:
+#     app: nginx3
+#   ports:
+#     - name: nginx3-port
+#       protocol: TCP
+#       port: 80
+#       targetPort: 80
+
+
+# Ingress nginx3
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kong-ingress
+  namespace: kong
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-body-size: '0'
+    #nginx.ingress.kubernetes.io/proxy-connect-timeout: '3600'
+    #nginx.ingress.kubernetes.io/proxy-read-timeout: '21600'
+    #nginx.ingress.kubernetes.io/proxy-send-timeout: '21600'
+    #nginx.ingress.kubernetes.io/send-timeout: '3600'
+    cert-manager.io/cluster-issuer: letsencrypt
+    konghq.com/strip-path: 'true'
+    #konghq.com/path: /nginx1
+    konghq.com/plugins: high-rate-limit, docs-site-cors
+spec:
+  rules:
+  - host: teste-kong.makesystem.com.br  # Substitua pelo seu domínio
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: kong-gateway-proxy
+            port:
+              number: 80
+  tls:
+  - hosts:
+      - teste-kong.makesystem.com.br
+    secretName: tls-kong-ingress
+    
+
