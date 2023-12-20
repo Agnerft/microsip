@@ -1,0 +1,32 @@
+# descomentar se o servi�o vai ter acesso por link externo usando roteamento do ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "21600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "21600"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "3600"
+    nginx.ingress.kubernetes.io/send-timeout: "3600"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    cert-manager.io/cluster-issuer: letsencrypt
+  name: dev01-ingress
+  namespace: crm
+spec:
+  rules:
+    - host: dev01.makesystem.com.br
+      http:
+        paths:
+          - backend:
+              service:
+                name: dev01-svc              
+                port:
+                  number: 443
+            pathType: Prefix      
+            path: /
+  tls:
+      - hosts:
+          - dev01.makesystem.com.br
+        secretName: tls-dev01
+        #secretName: tls-secret2

@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dev01-configmap
+  namespace: crm
+  annotations:
+    descriptions: map de variaveis de ambiente do projeto
+data:
+  keycloak_lnk: dev-keycloak.makesystem.com.br
+  keycloak_svc: keycloak.services.svc.cluster.local
+  namespace: homologacao
+  portal_ip: dev-portal.makesystem.com.br
+  portal_lnk: dev-portal
+  portal_svc: portal-svc.portal.svc.cluster.local
+  services: dev-services
+  servicos_lnk: dev-services
+  servicos_svc: gateway-service-svc.services.svc.cluster.local
+

@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: dev01
+  name: dev01-svc
+  namespace: crm
+spec:
+  ports:
+  - port: 443
+    name: https
+    protocol: TCP
+    targetPort: 8181
+  - port: 4848
+    name: admin
+    protocol: TCP
+    targetPort: 4848
+  - port: 8686
+    name: console
+    protocol: TCP
+    targetPort: 8686    
+  selector:
+    run: dev01
+  sessionAffinity: None
+  type: ClusterIP
