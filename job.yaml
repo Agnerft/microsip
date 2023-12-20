@@ -1,0 +1,15 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name:  job-test
+  namespace: tools
+  clusterName: k3d-agner-cluster
+spec:
+  template:
+    spec:
+      containers:
+      - name: job-test
+        image: nginx:latest
+        command: ["apt-get", "update"]
+      restartPolicy: Never
+  backoffLimit: 4

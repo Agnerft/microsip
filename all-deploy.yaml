@@ -1,0 +1,484 @@
+# apiVersion: v1
+# kind: Namespace
+# metadata:
+#   name: kong
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong-database
+  namespace: kong
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kong-database
+  template:
+    metadata:
+      labels:
+        app: kong-database
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:9.5
+          env:
+            - name: POSTGRES_USER
+              value: kong
+            - name: POSTGRES_DB
+              value: kong
+            - name: POSTGRES_PASSWORD
+              value: kong
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - kong
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong-migration-bootstrap
+  namespace: kong
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kong-migration-bootstrap
+  template:
+    metadata:
+      labels:
+        app: kong-migration-bootstrap
+    spec:
+      containers:
+        - name: kong-fc
+          image: claudioed/kong-fc
+          env:
+            - name: KONG_DATABASE
+              value: postgres
+            - name: KONG_PG_HOST
+              value: kong-database
+            - name: KONG_PG_USER
+              value: kong
+            - name: KONG_PG_PASSWORD
+              value: kong
+          command: ["kong", "migrations", "bootstrap"]
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong-migration-up
+  namespace: kong
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kong-migration-up
+  template:
+    metadata:
+      labels:
+        app: kong-migration-up
+    spec:
+      containers:
+        - name: kong-fc
+          image: claudioed/kong-fc
+          env:
+            - name: KONG_DATABASE
+              value: postgres
+            - name: KONG_PG_HOST
+              value: kong-database
+            - name: KONG_PG_USER
+              value: kong
+            - name: KONG_PG_PASSWORD
+              value: kong
+          command: ["kong", "migrations", "up"]
+          
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong
+  namespace: kong
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kong
+  template:
+    metadata:
+      labels:
+        app: kong
+    spec:
+      containers:
+        - name: kong-fc
+          image: claudioed/kong-fc
+          env:
+            - name: KONG_DATABASE
+              value: postgres
+            - name: KONG_PG_HOST
+              value: kong-database
+            - name: KONG_PG_DATABASE
+              value: kong
+            - name: KONG_PG_PASSWORD
+              value: kong
+            - name: KONG_PROXY_ACCESS_LOG
+              value: /dev/stdout
+            - name: KONG_ADMIN_ACCESS_LOG
+              value: /dev/stdout
+            - name: KONG_PROXY_ERROR_LOG
+              value: /dev/stderr
+            - name: KONG_ADMIN_ERROR_LOG
+              value: /dev/stderr
+            - name: KONG_ADMIN_LISTEN
+              value: "0.0.0.0:8001,0.0.0.0:8444 ssl"
+            - name: KONG_PROXY_LISTEN
+              value: "0.0.0.0:8000,0.0.0.0:8181,0.0.0.0:8443 ssl http2"
+            # - name: KONG_ADMIN_LISTEN
+            #   value: "0.0.0.0:8001"
+            - name: KONG_REAL_IP_RECURSIVE
+              value: "on"
+            - name: KONG_NGINX_HTTP_RESOLVER
+              value: "8.8.8.8"
+            - name: KONG_PLUGINS
+              value: bundled
+          ports:
+            - containerPort: 8000
+            - containerPort: 8001
+            - containerPort: 8443
+          livenessProbe:
+            httpGet:
+              path: /status
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /status
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: base-sip
+  namespace: kong
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: base-sip
+  template:
+    metadata:
+      labels:
+        app: base-sip
+    spec:
+      containers:
+        - name: ngnx-com-json-server
+          image: agnerft/ngnx-com-json-server:1.4
+          ports:
+            - containerPort: 8080
+            - containerPort: 8443
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: konga
+  namespace: kong
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: konga
+  template:
+    metadata:
+      labels:
+        app: konga
+    spec:
+      containers:
+        - name: konga
+          image: pantsel/konga
+          env:
+            - name: NODE_ENV
+              value: development
+          ports:
+            - containerPort: 1337
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx1
+  namespace: portal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx1
+  template:
+    metadata:
+      labels:
+        app: nginx1
+    spec:
+      containers:
+        - name: nginx1
+          image: nginxdemos/hello
+          ports:
+            - containerPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx2
+  namespace: crm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx2
+  template:
+    metadata:
+      labels:
+        app: nginx2
+    spec:
+      containers:
+        - name: nginx2
+          image: nginxdemos/hello
+          ports:
+            - containerPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx3
+  namespace: kong
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx3
+  template:
+    metadata:
+      labels:
+        app: nginx3
+    spec:
+      containers:
+        - name: nginx3
+          image: nginxdemos/hello
+          ports:
+            - containerPort: 80
+
+
+
+---
+#SERVICES
+
+# kong-database-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-database
+  namespace: kong
+spec:
+  selector:
+    app: kong-database
+  ports:
+    - name: postgres
+      protocol: TCP
+      port: 5432
+      targetPort: 5432
+
+
+---
+
+# kong-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong
+  namespace: kong
+spec:
+  selector:
+    app: kong
+  ports:
+    - name: proxy
+      protocol: TCP
+      port: 80
+      targetPort: 8000
+    - name: admin
+      protocol: TCP
+      port: 8001
+      targetPort: 8001
+    # Adicione portas adicionais conforme necessário
+  type: ClusterIP  # Isso pode ser alterado dependendo do ambiente
+
+---
+
+# base-sip-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: base-sip
+  namespace: kong
+spec:
+  selector:
+    app: base-sip
+  ports:
+    - name: port1
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+    - name: port2
+      protocol: TCP
+      port: 8443
+      targetPort: 8443
+
+---
+
+# konga-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: konga
+  namespace: kong
+spec:
+  selector:
+    app: konga
+  ports:
+    - name: konga-port
+      protocol: TCP
+      port: 1337
+      targetPort: 1337
+
+
+---
+
+# nginx1-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx1
+  namespace: portal
+spec:
+  selector:
+    app: nginx1
+  ports:
+    - name: nginx1-port
+      protocol: TCP
+      port: 80
+      targetPort: 80
+
+---
+
+# nginx1-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx2
+  namespace: kong
+spec:
+  selector:
+    app: nginx2
+  ports:
+    - name: nginx2-port
+      protocol: TCP
+      port: 80
+      targetPort: 80
+
+
+---
+
+# nginx1-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx3
+  namespace: kong
+spec:
+  selector:
+    app: nginx3
+  ports:
+    - name: nginx3-port
+      protocol: TCP
+      port: 80
+      targetPort: 80
+
+# ---
+
+# # ingress.yaml
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: meu-ingress
+#   namespace: kong
+#   annotations:
+#     kubernetes.io/ingress.class: kong
+#     nginx.ingress.kubernetes.io/proxy-body-size: '0'
+#     nginx.ingress.kubernetes.io/proxy-connect-timeout: '3600'
+#     nginx.ingress.kubernetes.io/proxy-read-timeout: '21600'
+#     nginx.ingress.kubernetes.io/proxy-send-timeout: '21600'
+#     nginx.ingress.kubernetes.io/send-timeout: '3600'
+# spec:
+#   rules:
+#     - host: teste-kong.makesystem.com.br
+#       http:
+#         paths:
+#           - path: /kong-database
+#             pathType: ImplementationSpecific
+#             backend:
+#               service:
+#                 name: kong-database
+#                 port:
+#                   number: 5432
+#           - path: /kong
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: kong
+#                 port:
+#                   number: 8000
+#           - path: /base-sip
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: base-sip
+#                 port:
+#                   number: 8080
+#           - path: /konga
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: konga
+#                 port:
+#                   number: 1337
+#           - path: /nginx1
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: nginx1
+#                 port:
+#                   number: 80
+#           - path: /nginx2
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: nginx2
+#                 port:
+#                   number: 80
+#           - path: /nginx3
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: nginx3
+#                 port:
+#                   number: 80
