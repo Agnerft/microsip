@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name:  job-update-hosts
+  namespace: tools
+  annotations:
+    teste1: valorTeste1
+  #clusterName: k8s-development
+spec:
+  schedule: "*/1 * * * *"
+  jobTemplate:
+    spec:  
+      template:
+        spec:
+          containers:
+          - name: job-update-hosts
+            image: agnerft/nginx-job-run-hosts:1.4
+            command: ["/bin/sh", "-c"]
+            args:
+              - "kubectx k8s-production ; kubens crm ; sh /home/data/update-hosts.sh"
+          restartPolicy: OnFailure
+      backoffLimit: 3
