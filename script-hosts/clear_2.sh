@@ -15,7 +15,7 @@ while IFS= read -r pasta; do
     # Loop através das subpastas específicas
     for subpasta in "${subpastas[@]}"; do
         echo "Entrando em $subpasta"
-        cd "$subpasta" || exit 1 # Muda para a subpasta, sai do script se falhar
+        cd "$subpasta" # Muda para a subpasta, sai do script se falhar
 
         echo "Entrando em mailings_uploads"
         cd mailings_uploads        
