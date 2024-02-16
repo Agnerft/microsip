@@ -16,11 +16,13 @@ while IFS= read -r pasta; do
     for subpasta in "${subpastas[@]}"; do
         echo "Entrando em $subpasta"
         cd "$subpasta" || exit 1 # Muda para a subpasta, sai do script se falhar
-        
-        # Remove arquivos que contêm "_INVALIDOS.csv" no final do nome
 
+        echo "Entrando em mailings_uploads"
+        cd mailings_uploads        
+        # Remove arquivos que contêm "_INVALIDOS.csv" no final do nome
         find . -type f -name "*_INVALIDOS.csv" -exec rm -f {} \;
         
+        cd ..
         cd ..                # Volta para a subpasta anterior
     done
     
@@ -28,4 +30,4 @@ while IFS= read -r pasta; do
 done < "$arq_txt"
 
 
-rm /home/agner/curso/Script/$arq_txt
+rm /opt/payara/glassfish/domains/domain1/docroot/files/$arq_txt
