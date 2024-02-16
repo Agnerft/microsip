@@ -30,4 +30,4 @@ while IFS= read -r pasta; do
 done < "$arq_txt"
 
 
-rm /opt/payara/glassfish/domains/domain1/docroot/files/$arq_txt
+rm /home/agner/curso/Script/$arq_txt
